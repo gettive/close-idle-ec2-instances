@@ -1,5 +1,8 @@
 import boto3
 from datetime import datetime, timedelta
+import os
+import urllib.request
+import json
 
 INSTANCE_IDS = os.environ["INSTANCE_IDS"]
 REGION = os.environ.get("REGION", "us-east-1")
@@ -13,6 +16,9 @@ def stop_instance(instance_id):
 
 def get_idle_instances(instance_ids):
     idle_instances = []
+
+    end_time = datetime.utcnow()
+    start_time = end_time - timedelta(hours=1)
 
     for instance_id in instance_ids:
         instance_idle = False
@@ -36,17 +42,14 @@ def get_idle_instances(instance_ids):
             instance_idle = avg_cpu < CPU_THRESHOLD   
 
         if instance_idle:
-            idle_instances.push(instance_id)
+            idle_instances.append(instance_id)
 
     return idle_instances
 
 
-def lambda_handler(event, context):
-    end_time = datetime.utcnow()
-    start_time = end_time - timedelta(hours=1)
-
+def lambda_handler(event, context=None):
     instance_ids = ''.join(INSTANCE_IDS.split()).split(",")
-    idle_instances = get_idle_instances(InstanceIds)
+    idle_instances = get_idle_instances(instance_ids)
 
     print(f"Stopping these due to low CPU usage; {INSTANCE_IDS}")
     ec2.stop_instances(InstanceIds=idle_instances)
