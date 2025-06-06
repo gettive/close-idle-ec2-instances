@@ -48,6 +48,7 @@ def lambda_handler(event, context):
     instance_ids = ''.join(INSTANCE_IDS.split()).split(",")
     idle_instances = get_idle_instances(InstanceIds)
 
+    print(f"Stopping these due to low CPU usage; {INSTANCE_IDS}")
     ec2.stop_instances(InstanceIds=idle_instances)
 
 
