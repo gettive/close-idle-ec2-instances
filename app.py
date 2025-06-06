@@ -49,7 +49,13 @@ def get_idle_instances(instance_ids):
 
 
 def lambda_handler(event, context=None):
-    instance_ids = ''.join(INSTANCE_IDS.split()).split(",")
+
+    instance_ids = []
+    if event["instance_ids"]:
+        instance_ids = event["instance_ids"]
+    else:
+        instance_ids = ''.join(INSTANCE_IDS.split()).split(",")
+        
     idle_instances = get_idle_instances(instance_ids)
 
     print(f"Stopping these due to low CPU usage; {INSTANCE_IDS}")
