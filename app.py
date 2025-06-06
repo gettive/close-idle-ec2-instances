@@ -1,41 +1,55 @@
 import boto3
 from datetime import datetime, timedelta
 
-INSTANCE_ID = os.environ["INSTANCE_ID"]
+INSTANCE_IDS = os.environ["INSTANCE_IDS"]
 REGION = os.environ.get("REGION", "us-east-1")
 CPU_THRESHOLD = float(os.environ.get("CPU_THRESHOLD", 5.0))
 
 ec2 = boto3.client('ec2', region_name=REGION)
 cloudwatch = boto3.client('cloudwatch', region_name=REGION)
 
+def stop_instance(instance_id):
+    pass
+
+def get_idle_instances(instance_ids):
+    idle_instances = []
+
+    for instance_id in instance_ids:
+        instance_idle = False
+
+        metrics = cloudwatch.get_metric_statistics(
+            Namespace='AWS/EC2',
+            MetricName='CPUUtilization',
+            Dimensions=[{'Name': 'InstanceId', 'Value': instance_id}],
+            StartTime=start_time,
+            EndTime=end_time,
+            Period=3600,
+            Statistics=['Average']
+        )
+
+        datapoints = metrics.get('Datapoints', [])
+
+        if not datapoints:
+            instance_idle = True
+        else:
+            avg_cpu = datapoints[0]['Average']
+            instance_idle = avg_cpu < CPU_THRESHOLD   
+
+        if instance_idle:
+            idle_instances.push(instance_id)
+
+    return idle_instances
+
+
 def lambda_handler(event, context):
     end_time = datetime.utcnow()
     start_time = end_time - timedelta(hours=1)
 
-    metrics = cloudwatch.get_metric_statistics(
-        Namespace='AWS/EC2',
-        MetricName='CPUUtilization',
-        Dimensions=[{'Name': 'InstanceId', 'Value': INSTANCE_ID}],
-        StartTime=start_time,
-        EndTime=end_time,
-        Period=3600,
-        Statistics=['Average']
-    )
+    instance_ids = ''.join(INSTANCE_IDS.split()).split(",")
+    idle_instances = get_idle_instances(InstanceIds)
 
-    datapoints = metrics.get('Datapoints', [])
-    if not datapoints:
-        print("No CPU data, assuming idle.")
-        should_stop = True
-    else:
-        avg_cpu = datapoints[0]['Average']
-        print(f"Average CPU: {avg_cpu}%")
-        should_stop = avg_cpu < CPU_THRESHOLD
+    ec2.stop_instances(InstanceIds=idle_instances)
 
-    if should_stop:
-        print(f"Stopping instance {INSTANCE_ID} due to low CPU usage.")
-        ec2.stop_instances(InstanceIds=[INSTANCE_ID])
-    else:
-        print(f"Instance {INSTANCE_ID} is active.")
 
 
 if __name__ == "__main__":
