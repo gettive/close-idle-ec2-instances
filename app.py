@@ -7,6 +7,7 @@ import json
 INSTANCE_IDS = os.environ["INSTANCE_IDS"]
 REGION = os.environ.get("REGION", "us-east-1")
 CPU_THRESHOLD = float(os.environ.get("CPU_THRESHOLD", 5.0))
+PERIOD = os.environ.get("PERIOD", 3600)
 
 ec2 = boto3.client('ec2', region_name=REGION)
 cloudwatch = boto3.client('cloudwatch', region_name=REGION)
@@ -29,7 +30,7 @@ def get_idle_instances(instance_ids):
             Dimensions=[{'Name': 'InstanceId', 'Value': instance_id}],
             StartTime=start_time,
             EndTime=end_time,
-            Period=3600,
+            Period=PERIOD,
             Statistics=['Average']
         )
 
